@@ -2,6 +2,7 @@
 # bashrc functions and aliases
 # this is the extent of this project
 
+me=$USER
 _sed_replace(){
     replace=$1
     with=$2
