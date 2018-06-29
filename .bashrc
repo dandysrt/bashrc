@@ -78,7 +78,7 @@ _cd(){
     export PREVIOUS_DIR=$(pwd)
     case $1 in
     # shortcuts can be just about any character(s)
-    "!!")
+    "~~")
         shift
         cd /to/frequently/used/dir/$(_concat_path_str $@)
         ;;
@@ -86,7 +86,7 @@ _cd(){
         cd $(_concat_path_str $@)
         ;;
     esac
-    
+
     # if you're dimwitted like me and sometimes
     # try to cd to a file
     path=$_
@@ -100,4 +100,130 @@ _cd(){
 # return to the previous working directory
 _back(){
     _cd $PREVIOUS_DIR
+}
+
+# requires atom isntallation as-is
+# may be replaced with any cli-executable text editor
+_atom_open_if_contains(){
+    no_results=0
+    results=""
+    if [[ $# -gt 1 ]]
+    then
+        dir=$1; shift
+        no_results=$(ls -a $dir | grep $@ | wc -l)
+        results=$(ls -a $dir | grep $@)
+    else
+        no_results=$(ls -a ./ | grep $@ | wc -l)
+        results=$(ls -a ./ | grep $1)
+    fi
+    if [[ $no_results -gt 1 ]]
+    then
+        echo "Search returned multiple results:"
+        echo
+        for r in $results
+        do
+            echo $r
+        done
+        echo
+    elif [[ $no_results -lt 1 ]]
+    then
+        echo "No results containing\"${@}\":"
+        echo
+        ls ./
+    else
+        shift
+        atom $(realpath $results) $@
+    fi
+}
+
+
+# allows checking out of a branch with a partial match
+_git_checkout(){
+    temp_b=$(_get_git_branch);
+    shift;
+    term=$(for x in $(echo $@); do found=$(echo $x | grep -v ^\-); if [[ ! -z $found ]]; then echo $found; break; fi; done;);
+    branch=$(git branch | grep -v origin | grep $term);
+    if [[ -z $branch ]]; then branch=$term; fi;
+    git checkout $branch 2>/tmp/giterr
+    if [[ $(echo $?) -lt 1 ]]
+    then
+        export lastb=$(temp_b);
+        if [[ -z $(cat /tmp/giterr) ]]
+        then
+            git pull
+        fi
+    elif [[ ! -z $(cat /tmp/giterr | grep stash) ]]
+    then
+        ((cat /tmp/giterr 1>&3) 3>&2)
+        echo
+        echo "...Stashing changes"
+        echo
+        git stash
+        echo
+        _git_checkout "stub" $branch
+    else
+        ((cat /tmp/giterr 1>&3) 3>&2)
+    fi
+    rm /tmp/giterr
+}
+
+_git_stuff(){
+    case $1 in
+        "branch")
+            if [[ -z $2 || $2 == "--list" ]]
+            then
+                echo "local branches:";
+                git branch;
+                echo "remote branches:";
+                git branch -r;
+            else
+                git $@
+            fi
+            ;;
+        "rmlast")
+            git reset HEAD~1
+            ;;
+        "undo")
+            git fetch origin;
+            git reset --hard origin/${2};
+            ;;
+        "checkout")
+            _git_checkout $@
+            ;;
+        "co")
+            _git_checkout $@
+            ;;
+        "rn")
+            _git_rename $1
+            ;;
+        "rename")
+            _git_rename $1
+            ;;
+        "pull")
+            git fetch && git pull
+            ;;
+        *)
+            git $@
+            ;;
+        esac
+}
+
+_mute_err(){
+    $@ 2>/dev/null;
+}
+
+_get_git_branch(){
+    echo "$(git status | grep 'On branch' | cut -d\  -f3)";
+}
+
+_git_rename(){
+    old_branch=$(_get_git_branch);
+    new_branch=$1;
+    git branch -m $old_branch $new_branch;
+    git push origin :${old_branch};
+    git push --set-upstream origin $new_branch;
+}
+
+_ls_l(){
+    ls -l $@
 }
