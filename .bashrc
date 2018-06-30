@@ -102,7 +102,7 @@ _back(){
     _cd $PREVIOUS_DIR
 }
 
-# requires atom isntallation as-is
+# requires atom installation as-is
 # may be replaced with any cli-executable text editor
 _atom_open_if_contains(){
     no_results=0
@@ -167,6 +167,9 @@ _git_checkout(){
     rm /tmp/giterr
 }
 
+
+# adds git shortcuts and additional functionality to 
+# commonly used git commands
 _git_stuff(){
     case $1 in
         "branch")
@@ -183,7 +186,7 @@ _git_stuff(){
         "rmlast")
             git reset HEAD~1
             ;;
-        "undo")
+        "undo") 
             git fetch origin;
             git reset --hard origin/${2};
             ;;
@@ -208,14 +211,20 @@ _git_stuff(){
         esac
 }
 
+
+# route stderr output to /dev/null
 _mute_err(){
     $@ 2>/dev/null;
 }
 
+
+# get current branch
 _get_git_branch(){
     echo "$(git status | grep 'On branch' | cut -d\  -f3)";
 }
 
+
+# function to rename current branch
 _git_rename(){
     old_branch=$(_get_git_branch);
     new_branch=$1;
@@ -223,6 +232,7 @@ _git_rename(){
     git push origin :${old_branch};
     git push --set-upstream origin $new_branch;
 }
+
 
 _ls_l(){
     ls -l $@
